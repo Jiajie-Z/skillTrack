@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import com.jiajie.skilltrack.dto.SkillRequest;
 import com.jiajie.skilltrack.dto.QuestionRequest;
 import com.jiajie.skilltrack.dto.PracticeSessionRequest;
+import com.jiajie.skilltrack.dto.AnswerResponse;
+import com.jiajie.skilltrack.dto.AnswerSubmissionRequest;
 
 @RestController
 @RequestMapping("/api")
@@ -45,6 +47,14 @@ public class LearningController {
     public Map<String, Long> createPracticeSession(@Valid @RequestBody PracticeSessionRequest request) {
         Long id = learningService.createPracticeSession(request);
         return Map.of("id", id);
+    }
+
+    @PostMapping("/practice-sessions/{sessionId}/answers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AnswerResponse submitAnswer(
+            @PathVariable Long sessionId,
+            @Valid @RequestBody AnswerSubmissionRequest request) {
+        return learningService.submitAnswer(sessionId, request);
     }
 
 }

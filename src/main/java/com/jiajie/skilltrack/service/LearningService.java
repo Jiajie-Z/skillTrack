@@ -14,6 +14,10 @@ import com.jiajie.skilltrack.model.Question;
 import com.jiajie.skilltrack.dto.PracticeSessionRequest;
 import com.jiajie.skilltrack.model.PracticeSession;
 import com.jiajie.skilltrack.repository.PracticeSessionRepository;
+import com.jiajie.skilltrack.dto.AnswerResponse;
+import com.jiajie.skilltrack.dto.AnswerSubmissionRequest;
+import com.jiajie.skilltrack.model.Answer;
+import com.jiajie.skilltrack.repository.AnswerRepository;
 
 @Service
 public class LearningService {
@@ -21,16 +25,19 @@ public class LearningService {
     private final SkillRepository skillRepository;
     private final QuestionRepository questionRepository;
     private final PracticeSessionRepository practiceSessionRepository;
+    private final AnswerRepository answerRepository;
 
     public LearningService(
             StudentRepository studentRepository,
             SkillRepository skillRepository,
             QuestionRepository questionRepository,
-            PracticeSessionRepository practiceSessionRepository) {
+            PracticeSessionRepository practiceSessionRepository,
+            AnswerRepository answerRepository) {
         this.studentRepository = studentRepository;
         this.skillRepository = skillRepository;
         this.questionRepository = questionRepository;
         this.practiceSessionRepository = practiceSessionRepository;
+        this.answerRepository = answerRepository;
     }
 
     @Transactional
@@ -82,6 +89,36 @@ public class LearningService {
         session.setSkill(skill);
 
         return practiceSessionRepository.save(session).getId();
+    }
+
+    @Transactional
+    public AnswerResponse submitAnswer(Long sessionId, AnswerSubmissionRequest request) {
+        PracticeSession session = practiceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("practice session not found"));
+
+        Question question = questionRepository.findById(request.questionId())
+                .orElseThrow(() -> new IllegalArgumentException("question not found"));
+
+        if (!question.getSkill().getId().equals(session.getSkill().getId())) {
+            throw new IllegalArgumentException("question does not belong to this practice session skill");
+        }
+
+        boolean correct = normalizeAnswer(request.submittedAnswer())
+                .equals(normalizeAnswer(question.getCorrectAnswer()));
+
+        Answer answer = new Answer();
+        answer.setPracticeSession(session);
+        answer.setQuestion(question);
+        answer.setSubmittedAnswer(request.submittedAnswer().trim());
+        answer.setCorrect(correct);
+
+        Answer saved = answerRepository.save(answer);
+
+        return new AnswerResponse(saved.getId(), saved.isCorrect());
+    }
+
+    private String normalizeAnswer(String answer) {
+        return answer.trim().replaceAll("\\s+", " ").toLowerCase();
     }
 
 }
