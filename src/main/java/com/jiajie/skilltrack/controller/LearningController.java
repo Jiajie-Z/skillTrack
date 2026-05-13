@@ -3,7 +3,7 @@ package com.jiajie.skilltrack.controller;
 import com.jiajie.skilltrack.dto.StudentRequest;
 import com.jiajie.skilltrack.service.LearningService;
 import jakarta.validation.Valid;
-import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import com.jiajie.skilltrack.dto.SkillRequest;
@@ -12,7 +12,9 @@ import com.jiajie.skilltrack.dto.PracticeSessionRequest;
 import com.jiajie.skilltrack.dto.AnswerResponse;
 import com.jiajie.skilltrack.dto.AnswerSubmissionRequest;
 import com.jiajie.skilltrack.dto.ProgressResponse;
+import com.jiajie.skilltrack.dto.QuestionResponse;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -62,6 +64,11 @@ public class LearningController {
     @GetMapping("/students/{studentId}/progress")
     public List<ProgressResponse> getProgress(@PathVariable Long studentId) {
         return learningService.getProgress(studentId);
+    }
+
+    @GetMapping("/students/{studentId}/recommendations")
+    public List<QuestionResponse> getRecommendations(@PathVariable Long studentId) {
+        return learningService.getRecommendations(studentId);
     }
 
 }

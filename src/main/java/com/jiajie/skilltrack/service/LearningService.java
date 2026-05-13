@@ -22,6 +22,7 @@ import com.jiajie.skilltrack.dto.ProgressResponse;
 import com.jiajie.skilltrack.model.SkillProgress;
 import com.jiajie.skilltrack.repository.SkillProgressRepository;
 import java.util.List;
+import com.jiajie.skilltrack.dto.QuestionResponse;
 
 @Service
 public class LearningService {
@@ -143,6 +144,34 @@ public class LearningService {
                         progress.getAttempts(),
                         progress.getCorrectAnswers(),
                         progress.getMasteryScore()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionResponse> getRecommendations(Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("student not found"));
+
+        List<SkillProgress> progressList = skillProgressRepository.findByStudentOrderByMasteryScoreAsc(student);
+
+        List<Question> recommendedQuestions;
+
+        if (progressList.isEmpty()) {
+            recommendedQuestions = questionRepository.findAll()
+                    .stream()
+                    .limit(5)
+                    .toList();
+        } else {
+            Skill weakestSkill = progressList.get(0).getSkill();
+            recommendedQuestions = questionRepository.findTop5BySkillOrderByDifficultyAsc(weakestSkill);
+        }
+
+        return recommendedQuestions.stream()
+                .map(question -> new QuestionResponse(
+                        question.getId(),
+                        question.getSkill().getId(),
+                        question.getPrompt(),
+                        question.getDifficulty()))
                 .toList();
     }
 
