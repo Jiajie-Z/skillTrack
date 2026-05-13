@@ -23,6 +23,8 @@ import com.jiajie.skilltrack.model.SkillProgress;
 import com.jiajie.skilltrack.repository.SkillProgressRepository;
 import java.util.List;
 import com.jiajie.skilltrack.dto.QuestionResponse;
+import com.jiajie.skilltrack.exception.NotFoundException;
+
 
 @Service
 public class LearningService {
@@ -52,7 +54,7 @@ public class LearningService {
     @Transactional
     public Long createStudent(StudentRequest request) {
         if (studentRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("email already exists");
+            throw new NotFoundException("email already exists");
         }
 
         Student student = new Student();
@@ -74,7 +76,7 @@ public class LearningService {
     @Transactional
     public Long createQuestion(QuestionRequest request) {
         Skill skill = skillRepository.findById(request.skillId())
-                .orElseThrow(() -> new IllegalArgumentException("skill not found"));
+                .orElseThrow(() -> new NotFoundException("skill not found"));
 
         Question question = new Question();
         question.setSkill(skill);
@@ -88,10 +90,10 @@ public class LearningService {
     @Transactional
     public Long createPracticeSession(PracticeSessionRequest request) {
         Student student = studentRepository.findById(request.studentId())
-                .orElseThrow(() -> new IllegalArgumentException("student not found"));
+                .orElseThrow(() -> new NotFoundException("student not found"));
 
         Skill skill = skillRepository.findById(request.skillId())
-                .orElseThrow(() -> new IllegalArgumentException("skill not found"));
+                .orElseThrow(() -> new NotFoundException("skill not found"));
 
         PracticeSession session = new PracticeSession();
         session.setStudent(student);
@@ -103,13 +105,13 @@ public class LearningService {
     @Transactional
     public AnswerResponse submitAnswer(Long sessionId, AnswerSubmissionRequest request) {
         PracticeSession session = practiceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("practice session not found"));
+                .orElseThrow(() -> new NotFoundException("practice session not found"));
 
         Question question = questionRepository.findById(request.questionId())
-                .orElseThrow(() -> new IllegalArgumentException("question not found"));
+                .orElseThrow(() -> new NotFoundException("question not found"));
 
         if (!question.getSkill().getId().equals(session.getSkill().getId())) {
-            throw new IllegalArgumentException("question does not belong to this practice session skill");
+            throw new NotFoundException("question does not belong to this practice session skill");
         }
 
         boolean correct = normalizeAnswer(request.submittedAnswer())
@@ -134,7 +136,7 @@ public class LearningService {
     @Transactional(readOnly = true)
     public List<ProgressResponse> getProgress(Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("student not found"));
+                .orElseThrow(() -> new NotFoundException("student not found"));
 
         return skillProgressRepository.findByStudentOrderByMasteryScoreAsc(student)
                 .stream()
@@ -150,7 +152,7 @@ public class LearningService {
     @Transactional(readOnly = true)
     public List<QuestionResponse> getRecommendations(Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("student not found"));
+                .orElseThrow(() -> new NotFoundException("student not found"));
 
         List<SkillProgress> progressList = skillProgressRepository.findByStudentOrderByMasteryScoreAsc(student);
 
