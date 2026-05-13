@@ -18,6 +18,10 @@ import com.jiajie.skilltrack.dto.AnswerResponse;
 import com.jiajie.skilltrack.dto.AnswerSubmissionRequest;
 import com.jiajie.skilltrack.model.Answer;
 import com.jiajie.skilltrack.repository.AnswerRepository;
+import com.jiajie.skilltrack.dto.ProgressResponse;
+import com.jiajie.skilltrack.model.SkillProgress;
+import com.jiajie.skilltrack.repository.SkillProgressRepository;
+import java.util.List;
 
 @Service
 public class LearningService {
@@ -26,18 +30,22 @@ public class LearningService {
     private final QuestionRepository questionRepository;
     private final PracticeSessionRepository practiceSessionRepository;
     private final AnswerRepository answerRepository;
+    private final SkillProgressRepository skillProgressRepository;
 
     public LearningService(
             StudentRepository studentRepository,
             SkillRepository skillRepository,
             QuestionRepository questionRepository,
             PracticeSessionRepository practiceSessionRepository,
-            AnswerRepository answerRepository) {
+            AnswerRepository answerRepository,
+            SkillProgressRepository skillProgressRepository) {
         this.studentRepository = studentRepository;
         this.skillRepository = skillRepository;
         this.questionRepository = questionRepository;
         this.practiceSessionRepository = practiceSessionRepository;
         this.answerRepository = answerRepository;
+        this.skillProgressRepository = skillProgressRepository;
+
     }
 
     @Transactional
@@ -113,12 +121,59 @@ public class LearningService {
         answer.setCorrect(correct);
 
         Answer saved = answerRepository.save(answer);
+        updateProgress(session.getStudent(), session.getSkill(), correct);
 
         return new AnswerResponse(saved.getId(), saved.isCorrect());
     }
 
     private String normalizeAnswer(String answer) {
         return answer.trim().replaceAll("\\s+", " ").toLowerCase();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProgressResponse> getProgress(Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("student not found"));
+
+        return skillProgressRepository.findByStudentOrderByMasteryScoreAsc(student)
+                .stream()
+                .map(progress -> new ProgressResponse(
+                        progress.getSkill().getId(),
+                        progress.getSkill().getName(),
+                        progress.getAttempts(),
+                        progress.getCorrectAnswers(),
+                        progress.getMasteryScore()))
+                .toList();
+    }
+
+    private SkillProgress updateProgress(Student student, Skill skill, boolean correct) {
+        SkillProgress progress = skillProgressRepository.findByStudentAndSkill(student, skill)
+                .orElseGet(() -> {
+                    SkillProgress created = new SkillProgress();
+                    created.setStudent(student);
+                    created.setSkill(skill);
+                    return created;
+                });
+
+        progress.setAttempts(progress.getAttempts() + 1);
+
+        if (correct) {
+            progress.setCorrectAnswers(progress.getCorrectAnswers() + 1);
+        }
+
+        progress.setMasteryScore(calculateMasteryScore(
+                progress.getAttempts(),
+                progress.getCorrectAnswers()));
+
+        return skillProgressRepository.save(progress);
+    }
+
+    private double calculateMasteryScore(int attempts, int correctAnswers) {
+        if (attempts == 0) {
+            return 0.0;
+        }
+
+        return Math.round((correctAnswers * 1000.0 / attempts)) / 10.0;
     }
 
 }

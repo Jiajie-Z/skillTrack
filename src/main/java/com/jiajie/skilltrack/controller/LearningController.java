@@ -11,6 +11,8 @@ import com.jiajie.skilltrack.dto.QuestionRequest;
 import com.jiajie.skilltrack.dto.PracticeSessionRequest;
 import com.jiajie.skilltrack.dto.AnswerResponse;
 import com.jiajie.skilltrack.dto.AnswerSubmissionRequest;
+import com.jiajie.skilltrack.dto.ProgressResponse;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -55,6 +57,11 @@ public class LearningController {
             @PathVariable Long sessionId,
             @Valid @RequestBody AnswerSubmissionRequest request) {
         return learningService.submitAnswer(sessionId, request);
+    }
+
+    @GetMapping("/students/{studentId}/progress")
+    public List<ProgressResponse> getProgress(@PathVariable Long studentId) {
+        return learningService.getProgress(studentId);
     }
 
 }
